@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+enum TruckingUserRole {
+    ADMIN
+    BROKER
+    FACTORYOWNER
+}
+
+enum TruckType {
+    SMALL
+    MEDIUM
+    LARGE
+}
+
+enum Regions {
+    ISLAMABAD
+    KARACHI
+    LAHORE
+    PESHAWAR
+    QUETTA
+    KASHMIR
+}
+
+model TruckingUser {
+    userId       Int              @id @default(autoincrement())
+    email        String           @unique
+    password     String
+    createdAt    DateTime         @default(now())
+    updatedAt    DateTime         @updatedAt
+    role         TruckingUserRole
+    broker       Broker?
+    admin        Admin?
+    factoryOwner FactoryOwner?
+}
+
+model Admin {
+    adminId Int          @id @default(autoincrement())
+    name    String
+    phone   String
+    user    TruckingUser @relation(fields: [userId], references: [userId])
+    userId  Int          @unique
+}
+
+model Broker {
+    brokerId Int    @id @default(autoincrement())
+    name     String
+    phone    String
+    address  String
+
+    userId Int          @unique
+    user   TruckingUser @relation(fields: [userId], references: [userId])
+    trucks Truck[]
+    region Regions
+    bids   Bid[]
+}
+
+model FactoryOwner {
+    factoryOwnerId          Int            @id @default(autoincrement())
+    name                    String
+    phone                   String
+    user                    TruckingUser   @relation(fields: [userId], references: [userId])
+    userId                  Int            @unique
+    factoryName             String
+    tonnage                 Int
+    factoryAddress          String
+    truckRequests           TruckRequest[]
+    loadTypes               LoadType[]
+    factoryPickupLocations  Location[]     @relation("FactoryPickupLocations")
+    factoryDropoffLocations Location[]     @relation("FactoryDropoffLocations")
+}
+
+model TruckRequest {
+    truckRequestId Int     @id @default(autoincrement())
+    pickUpTime     Int
+    bidEndTime     Int
+    tonnage        Int
+    isActive       Boolean
+    bids           Bid[]
+
+    truckPickupLocations  Location[] @relation("TruckPickupLocations")
+    truckDropoffLocations Location[] @relation("TruckDropoffLocations")
+    truckType             TruckType
+
+    FactoryOwner   FactoryOwner? @relation(fields: [factoryOwnerId], references: [factoryOwnerId])
+    factoryOwnerId Int?
+}
+
+model Location {
+    locationId              Int            @id @default(autoincrement())
+    latitude                Decimal
+    longitude               Decimal
+    truckPickupLocations    TruckRequest[] @relation("TruckPickupLocations")
+    truckDropoffLocations   TruckRequest[] @relation("TruckDropoffLocations")
+    factoryPickupLocations  FactoryOwner[] @relation("FactoryPickupLocations")
+    factoryDropoffLocations FactoryOwner[] @relation("FactoryDropoffLocations")
+}
+
+model Bid {
+    bidId          Int           @id @default(autoincrement())
+    bidAmount      Int
+    createdAt      DateTime      @default(now())
+    updatedAt      DateTime      @updatedAt
+    truckRequest   TruckRequest? @relation(fields: [truckRequestId], references: [truckRequestId])
+    truckRequestId Int?
+    Broker         Broker?       @relation(fields: [brokerId], references: [brokerId])
+    brokerId       Int?
+}
+
+model LoadType {
+    loadTypeId Int    @id @default(autoincrement())
+    name       String
+
+    FactoryOwner   FactoryOwner? @relation(fields: [factoryOwnerId], references: [factoryOwnerId])
+    factoryOwnerId Int?
+}
+
+model Truck {
+    truckId            Int       @id @default(autoincrement())
+    truckName          String
+    truckType          TruckType
+    registrationNumber String
+    dimension          String
+    broker             Broker?   @relation(fields: [brokerId], references: [brokerId])
+    brokerId           Int?
+}
